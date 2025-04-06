@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Course des Petits Princes</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: linear-gradient(#87ceeb, #ffffff);
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+    }
+    .overlay button, .overlay a {
+      margin-top: 20px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #endScreen, #startScreen {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+    <p>Aide un petit prince à réaliser son rêve en récoltant des pièces !</p>
+    <button onclick="startGame()">Commencer</button>
+  </div>
+
+  <div id="endScreen" class="overlay">
+    Bravo ! Grâce à toi, un rêve a été accompli 🌟<br/>
+    <a href="https://www.petitprince.asso.fr/faire-un-don/" target="_blank">Faire un don maintenant</a>
+  </div>
+
+  <audio id="bgm" loop>
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6a7cf355a2.mp3?filename=soft-piano-ambient-10565.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800;
+    canvas.height = 400;
+
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const bgm = document.getElementById('bgm');
+
+    let player, keys, coins, score, gameSpeed, maxScore, gravityTimer;
+    let gameRunning = false;
+
+    function initGame() {
+      player = {
+        x: 100,
+        y: 300,
+        width: 50,
+        height: 50,
+        color: '#FFD700',
+        dy: 0,
+        gravity: 0.8,
+        jumpForce: -12,
+        grounded: false
+      };
+
+      keys = {};
+      coins = [];
+      score = 0;
+      gameSpeed = 4;
+      maxScore = 10;
+      gameRunning = true;
+
+      gravityTimer = setInterval(() => {
+        gameSpeed += 0.2;
+      }, 3000);
+
+      gameLoop();
+    }
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      bgm.play();
+      initGame();
+    }
+
+    function createCoin() {
+      let y = Math.random() * 200 + 100;
+      coins.push({ x: canvas.width, y: y, width: 20, height: 20 });
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawCoins() {
+      ctx.fillStyle = 'gold';
+      for (let coin of coins) {
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#333';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Dons : ${score} €`, 10, 30);
+    }
+
+    function update() {
+      if (score >= maxScore) {
+        gameRunning = false;
+        clearInterval(gravityTimer);
+        endScreen.style.display = 'flex';
+        return;
+      }
+
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      if (player.y > 300) {
+        player.y = 300;
+        player.dy = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      if (keys[' '] && player.grounded) {
+        player.dy = player.jumpForce;
+      }
+
+      for (let i = coins.length - 1; i >= 0; i--) {
+        coins[i].x -= gameSpeed;
+
+        if (
+          player.x < coins[i].x + coins[i].width &&
+          player.x + player.width > coins[i].x &&
+          player.y < coins[i].y + coins[i].height &&
+          player.y + player.height > coins[i].y
+        ) {
+          coins.splice(i, 1);
+          score++;
+        }
+      }
+
+      if (Math.random() < 0.02) createCoin();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPlayer();
+      drawCoins();
+      drawScore();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // Show start screen initially
+    startScreen.style.display = 'flex';
+  </script>
+</body>
+</html>
