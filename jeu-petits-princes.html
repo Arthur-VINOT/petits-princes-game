@@ -11,7 +11,8 @@
       font-family: sans-serif;
     }
     canvas {
-      background: linear-gradient(#87ceeb, #ffffff);
+      background: url(fond.jpg);
+      background-size: cover;
       display: block;
     }
     .overlay {
@@ -42,6 +43,12 @@
     #endScreen, #startScreen {
       display: none;
     }
+    .level-up-message {
+      font-size: 28px;
+      color: yellow;
+      font-weight: bold;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -49,38 +56,43 @@
 
   <div id="startScreen" class="overlay">
     <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
-    <p>Aide un petit prince à réaliser son rêve en récoltant des pièces !</p>
+    <p>Aide un petit prince à réaliser son rêve en récoltant des pièces et des billets ! Chaque piéce raporte 1€ et un billet 10€</p>
     <button onclick="startGame()">Commencer</button>
   </div>
 
   <div id="endScreen" class="overlay">
-    Bravo ! Grâce à toi, un rêve a été accompli 🌟<br/>
-    <a href="https://www.petitprince.asso.fr/faire-un-don/" target="_blank">Faire un don maintenant</a>
+    Bravo ! Grâce à toi, un rêve a été accompli 🌟Dévlopé par TESSIER DEBIESSE Arthur<br/>
+    <a href="https://www.petitsprinces.com//" target="_blank">Faire un don maintenant</a>
+    <a href="jeu-petits-princes.html" target="_blank">Rejouer</a> 
+    <a href="https://github.com/Arthur-VINOT" target="_blank">Mon GitHub</a> 
+    <a href="https://frog-plums-ktec.squarespace.com/portfolio/condition-dutilisationlcpp" target="_blank">Condition d'utiliation</a> 
   </div>
 
   <audio id="bgm" loop>
-    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6a7cf355a2.mp3?filename=soft-piano-ambient-10565.mp3" type="audio/mpeg">
+    <source src="music.mp3" type="audio/mpeg">
   </audio>
 
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    canvas.width = 800;
-    canvas.height = 400;
+
+    // Ajuster la taille du canvas pour occuper tout l'écran
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     const startScreen = document.getElementById('startScreen');
     const endScreen = document.getElementById('endScreen');
     const bgm = document.getElementById('bgm');
 
-    let player, keys, coins, score, gameSpeed, maxScore, gravityTimer;
+    let player, keys, coins, score, gameSpeed, maxScore, gravityTimer, levelUpMessage, lastLevel, obstacles;
     let gameRunning = false;
 
     function initGame() {
       player = {
         x: 100,
-        y: 300,
-        width: 50,
-        height: 50,
+        y: canvas.height - 150,
+        width: 30,
+        height: 70,
         color: '#FFD700',
         dy: 0,
         gravity: 0.8,
@@ -90,10 +102,13 @@
 
       keys = {};
       coins = [];
+      obstacles = [];
       score = 0;
       gameSpeed = 4;
-      maxScore = 10;
+      maxScore = 1;
+      lastLevel = 0;
       gameRunning = true;
+      levelUpMessage = "";
 
       gravityTimer = setInterval(() => {
         gameSpeed += 0.2;
@@ -109,21 +124,65 @@
     }
 
     function createCoin() {
-      let y = Math.random() * 200 + 100;
-      coins.push({ x: canvas.width, y: y, width: 20, height: 20 });
+      let y = Math.random() * (canvas.height - 200) + 100;
+      let type = Math.random() < 0.7 ? 'coin' : 'bill';
+      let value = type === 'coin' ? 1 : 10;
+      coins.push({ x: canvas.width, y: y, width: type === 'coin' ? 15 : 30, height: type === 'coin' ? 15 : 20, type, value });
+    }
+
+    function createObstacle() {
+      let height = Math.random() * 50 + 20; // Hauteur de l'obstacle
+      obstacles.push({ x: canvas.width, y: canvas.height - height, width: 30, height: height });
     }
 
     function drawPlayer() {
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+      // Tête
+      ctx.fillStyle = '#FFCC99';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2); // Cercle pour la tête
+      ctx.fill();
+
+      // Corps
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(player.x, player.y + 30, player.width, player.height - 20); // Corps
+
+      // Bras (lignes)
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(player.x - 10, player.y + 50); // Bras gauche
+      ctx.lineTo(player.x - 20, player.y + 70);
+      ctx.moveTo(player.x + player.width + 10, player.y + 50); // Bras droit
+      ctx.lineTo(player.x + player.width + 20, player.y + 70);
+      ctx.stroke();
+
+      // Jambes (lignes)
+      ctx.beginPath();
+      ctx.moveTo(player.x + 10, player.y + player.height); // Jambe gauche
+      ctx.lineTo(player.x + 10, player.y + player.height + 20);
+      ctx.moveTo(player.x + player.width - 10, player.y + player.height); // Jambe droite
+      ctx.lineTo(player.x + player.width - 10, player.y + player.height + 20);
+      ctx.stroke();
     }
 
     function drawCoins() {
-      ctx.fillStyle = 'gold';
       for (let coin of coins) {
-        ctx.beginPath();
-        ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2);
-        ctx.fill();
+        if (coin.type === 'coin') {
+          ctx.fillStyle = 'gold';
+          ctx.beginPath();
+          ctx.arc(coin.x, coin.y, coin.width / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (coin.type === 'bill') {
+          ctx.fillStyle = 'green';
+          ctx.fillRect(coin.x - coin.width / 2, coin.y - coin.height / 2, coin.width, coin.height);
+        }
+      }
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = 'red';
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
       }
     }
 
@@ -131,6 +190,14 @@
       ctx.fillStyle = '#333';
       ctx.font = '20px Arial';
       ctx.fillText(`Dons : ${score} €`, 10, 30);
+    }
+
+    function drawLevelUpMessage() {
+      if (levelUpMessage) {
+        ctx.fillStyle = 'yellow';
+        ctx.font = '30px Arial';
+        ctx.fillText(levelUpMessage, canvas.width / 2 - ctx.measureText(levelUpMessage).width / 2, canvas.height / 2);
+      }
     }
 
     function update() {
@@ -141,11 +208,20 @@
         return;
       }
 
+      // Vérifier les paliers de score multiples de 10
+      if (score >= (lastLevel + 1) * 10) {
+        lastLevel++;
+        levelUpMessage = `Niveau ${lastLevel} atteint ! 🎉`;
+        setTimeout(() => {
+          levelUpMessage = "";
+        }, 2000);
+      }
+
       player.dy += player.gravity;
       player.y += player.dy;
 
-      if (player.y > 300) {
-        player.y = 300;
+      if (player.y > canvas.height - 100) {
+        player.y = canvas.height - 100;
         player.dy = 0;
         player.grounded = true;
       } else {
@@ -156,28 +232,61 @@
         player.dy = player.jumpForce;
       }
 
+      // Détecter la collision avec les obstacles et "grimper" dessus
+      for (let obs of obstacles) {
+        if (
+          player.x + player.width > obs.x &&
+          player.x < obs.x + obs.width &&
+          player.y + player.height - 10 <= obs.y && // Si le joueur est au-dessus de l'obstacle
+          player.y + player.height - 10 > obs.y // Si le joueur touche le sommet de l'obstacle
+        ) {
+          player.y = obs.y - player.height; // Le joueur grimpe sur l'obstacle
+          player.dy = 0; // Il cesse de tomber
+          player.grounded = true;
+        }
+      }
+
+      // Déplacer les pièces
       for (let i = coins.length - 1; i >= 0; i--) {
         coins[i].x -= gameSpeed;
-
         if (
           player.x < coins[i].x + coins[i].width &&
           player.x + player.width > coins[i].x &&
           player.y < coins[i].y + coins[i].height &&
           player.y + player.height > coins[i].y
         ) {
+          score += coins[i].value;
           coins.splice(i, 1);
-          score++;
         }
       }
 
+          // Collision obstacles
+          for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+
+        if (
+          player.x < obstacles[i].x + obstacles[i].width &&
+          player.x + player.width > obstacles[i].x &&
+          player.y < obstacles[i].y + obstacles[i].height &&
+          player.y + player.height > obstacles[i].y
+        ) {
+          // Fin du jeu sur collision
+          gameRunning = false;
+          clearInterval(gravityTimer);
+          endScreen.style.display = 'flex';
+        }
+      }
       if (Math.random() < 0.02) createCoin();
+      if (Math.random() < 0.01) createObstacle();
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawPlayer();
       drawCoins();
+      drawObstacles();
       drawScore();
+      drawLevelUpMessage();
     }
 
     function gameLoop() {
