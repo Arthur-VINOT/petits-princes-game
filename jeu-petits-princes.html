@@ -7,6 +7,7 @@
   <style>
     body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
       font-family: sans-serif;
     }
@@ -29,6 +30,7 @@
       align-items: center;
       font-size: 24px;
       text-align: center;
+      z-index: 2;
     }
     .overlay button, .overlay a {
       margin-top: 20px;
@@ -49,8 +51,10 @@
       font-weight: bold;
       margin-top: 20px;
     }
-    #hitMessage {	}	background: rgba(255, 0, 0, 0.7);
-	.level-up-message {	font-size: 20px;}
+    #hitMessage {
+      background: rgba(255, 0, 0, 0.7);
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -58,56 +62,50 @@
 
   <div id="startScreen" class="overlay">
     <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
-    <p>Aide un petit prince à réaliser son rêve en récoltant des pièces et des billets ! Chaque piéce raporte 1€ et un billet 10€</p>
-    <img src="fond2.png" 
-         alt="Logo" 
-         style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <p>Aide un petit prince à réaliser son rêve en récoltant des pièces et des billets ! Chaque pièce rapporte 1€ et un billet 10€</p>
+    <img src="fond2.png" alt="Logo" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
     <button onclick="startGame()">Commencer</button>
   </div>
 
   <div id="endScreen" class="overlay">
-    Bravo ! Grâce à toi, un rêve a été accompli 🌟Dévlopé par TESSIER DEBIESSE Arthur</h2>
-    <img src="fin.png" 
-         alt="Victoire" 
-         style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
-    <a href="https://www.petitsprinces.com//" target="_blank">Faire un don maintenant</a>
-    <a href="jeu-petits-princes.html" target="_blank">Rejouer</a> 
+    Bravo ! Grâce à toi, un rêve a été accompli 🌟
+    <img src="fin.png" alt="Victoire" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <a href="https://www.petitsprinces.com/" target="_blank">Faire un don maintenant</a>
+    <a href="jeu-petits-princes.html">Recommence et réaccomplis un rêve</a>
     <a href="https://github.com/Arthur-VINOT" target="_blank">Mon GitHub</a> 
-    <a href="https://github.com/Arthur-VINOT/petits-princes-game" target="_blank">Condition d'utiliation</a> 
+    <a href="condition.html">Conditions d'utilisation</a> 
   </div>
 
-  <div id="hitMessage" class="overlay" style="display: none;">
-
+  <div id="hitMessage" class="overlay">
     Aïe ! Tu as touché un obstacle ! Fais attention !
-    
-    </div>
-    
+  </div>
+
   <audio id="bgm" loop>
     <source src="music.mp3" type="audio/mpeg">
   </audio>
 
   <script>
- const canvas = document.getElementById('game');
+    const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-
-    // Ajuster la taille du canvas pour occuper tout l'écran
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     const startScreen = document.getElementById('startScreen');
     const endScreen = document.getElementById('endScreen');
+    const hitMessage = document.getElementById('hitMessage');
     const bgm = document.getElementById('bgm');
 
-    let player, keys, coins, score, gameSpeed, maxScore, gravityTimer, levelUpMessage, lastLevel, obstacles;
-    let gameRunning = false;
+    let player, keys, coins, obstacles, score, level, gameSpeed, maxScore, gravityTimer, lastLevel, levelUpMessage, gameRunning;
+
+    const playerImage = new Image();
+    playerImage.src = 'prince.png';
 
     function initGame() {
       player = {
         x: 100,
         y: canvas.height - 150,
-        width: 30,
-        height: 70,
-        color: '#FFD700',
+        width: 60,
+        height: 80,
         dy: 0,
         gravity: 0.8,
         jumpForce: -12,
@@ -118,8 +116,9 @@
       coins = [];
       obstacles = [];
       score = 0;
+      level = 1;
       gameSpeed = 4;
-      maxScore = 100;
+      maxScore = 1;
       lastLevel = 0;
       gameRunning = true;
       levelUpMessage = "";
@@ -133,6 +132,7 @@
 
     function startGame() {
       startScreen.style.display = 'none';
+      endScreen.style.display = 'none';
       bgm.play();
       initGame();
     }
@@ -145,43 +145,12 @@
     }
 
     function createObstacle() {
-      let height = Math.random() * 50 + 20; // Hauteur de l'obstacle
-      obstacles.push({ x: canvas.width, y: canvas.height - height, width: 30, height: height });
+      let height = Math.random() * 50 + 20;
+      obstacles.push({ x: canvas.width, y: canvas.height - height, width: 30, height });
     }
 
     function drawPlayer() {
-      // Tête
-      ctx.fillStyle = '#FFCC99';
-      ctx.beginPath();
-      ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2); // Cercle pour la tête
-      ctx.fill();
-      // Tête
-      ctx.fillStyle = '#FFCC99';
-      ctx.beginPath();
-      ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2); // Cercle pour la tête
-      ctx.fill();
-
-      // Corps
-      ctx.fillStyle = '#FFD700';
-      ctx.fillRect(player.x, player.y + 30, player.width, player.height - 20); // Corps
-
-      // Bras (lignes)
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(player.x - 10, player.y + 50); // Bras gauche
-      ctx.lineTo(player.x - 20, player.y + 70);
-      ctx.moveTo(player.x + player.width + 10, player.y + 50); // Bras droit
-      ctx.lineTo(player.x + player.width + 20, player.y + 70);
-      ctx.stroke();
-
-      // Jambes (lignes)
-      ctx.beginPath();
-      ctx.moveTo(player.x + 10, player.y + player.height); // Jambe gauche
-      ctx.lineTo(player.x + 10, player.y + player.height + 20);
-      ctx.moveTo(player.x + player.width - 10, player.y + player.height); // Jambe droite
-      ctx.lineTo(player.x + player.width - 10, player.y + player.height + 20);
-      ctx.stroke();
+      ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
     }
 
     function drawCoins() {
@@ -191,7 +160,7 @@
           ctx.beginPath();
           ctx.arc(coin.x, coin.y, coin.width / 2, 0, Math.PI * 2);
           ctx.fill();
-        } else if (coin.type === 'bill') {
+        } else {
           ctx.fillStyle = 'green';
           ctx.fillRect(coin.x - coin.width / 2, coin.y - coin.height / 2, coin.width, coin.height);
         }
@@ -227,7 +196,6 @@
         return;
       }
 
-      // Vérifier les paliers de score multiples de 10
       if (score >= (lastLevel + 1) * 10) {
         lastLevel++;
         levelUpMessage = `Niveau ${lastLevel} atteint ! 🎉`;
@@ -251,21 +219,19 @@
         player.dy = player.jumpForce;
       }
 
-      // Détecter la collision avec les obstacles et "grimper" dessus
       for (let obs of obstacles) {
         if (
           player.x + player.width > obs.x &&
           player.x < obs.x + obs.width &&
-          player.y + player.height - 10 <= obs.y && // Si le joueur est au-dessus de l'obstacle
-          player.y + player.height - 10 > obs.y // Si le joueur touche le sommet de l'obstacle
+          player.y + player.height - 10 <= obs.y &&
+          player.y + player.height - 10 > obs.y
         ) {
-          player.y = obs.y - player.height; // Le joueur grimpe sur l'obstacle
-          player.dy = 0; // Il cesse de tomber
+          player.y = obs.y - player.height;
+          player.dy = 0;
           player.grounded = true;
         }
       }
 
-      // Déplacer les pièces
       for (let i = coins.length - 1; i >= 0; i--) {
         coins[i].x -= gameSpeed;
         if (
@@ -279,8 +245,7 @@
         }
       }
 
-          // Collision obstacles
-          for (let i = obstacles.length - 1; i >= 0; i--) {
+      for (let i = obstacles.length - 1; i >= 0; i--) {
         obstacles[i].x -= gameSpeed;
 
         if (
@@ -289,12 +254,14 @@
           player.y < obstacles[i].y + obstacles[i].height &&
           player.y + player.height > obstacles[i].y
         ) {
-          // Fin du jeu sur collision
-          gameRunning = false;
-          clearInterval(gravityTimer);
-          endScreen.style.display = 'flex';
+          // Collision détectée, afficher message
+          hitMessage.style.display = 'flex';
+          setTimeout(() => {
+            hitMessage.style.display = 'none';
+          }, 2000);
         }
       }
+
       if (Math.random() < 0.02) createCoin();
       if (Math.random() < 0.01) createObstacle();
     }
@@ -315,14 +282,9 @@
       requestAnimationFrame(gameLoop);
     }
 
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
-    });
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
 
-    // Show start screen initially
     startScreen.style.display = 'flex';
   </script>
 </body>
