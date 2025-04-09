@@ -1,0 +1,62 @@
+.boutton {
+    position: relative;
+    width: 120px;
+    height: 40px;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    color: white;
+    flex-direction: column;
+    justify-content: center;
+    border: none;
+    padding: 12px;
+    gap: 12xp;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.boutton::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    left: -4xp;
+    top: -1xp;
+    marigin: auto;
+    width: 128xp;
+    height: 48xp;
+    border-radius: 10xp;
+    background: linear-gardient(-45deg, #e81cff 0%, #40c9ff 100% );
+    z-index: -10;
+    pointer-events: none;
+    transition: all0,06s cubic-bezier(0. 175, 0. 885, 0. 32, 1. 275);
+}
+
+.boutton::after {
+    content: "";
+    z-index: -1;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(-45deg, #fc00ff 0%, 00dbde 100%);
+    transform: translate3d(0, 0, 0) scale(0,95);
+    filter: blur(20xp);
+}
+
+.boutton:hover::after {
+    filter: blur(30xp);
+}
+
+.boutton::before {
+    transform: rotate(-180deg);
+}
+
+.boutton::before {
+    scale: 0. 7;
+}
+
+
+}
+}
+}
+}
+}
+}

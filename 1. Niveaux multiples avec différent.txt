@@ -1,0 +1,35 @@
+1. Niveaux multiples avec différents environnements
+Tu pourrais créer plusieurs niveaux où l'arrière-plan et les obstacles changent à chaque niveau. Par exemple, chaque niveau pourrait avoir un thème différent, comme un désert, une forêt ou un château. Cela ajouterait de la variété et de l'immersion au jeu.
+
+2. Power-ups
+Ajoute des power-ups qui peuvent aider le joueur, comme un bouclier pour éviter les obstacles pendant un temps limité ou un double saut pour éviter les pièges difficiles. Ces power-ups pourraient être collectés de la même manière que les pièces.
+
+3. Vitesse variable et effets de difficulté progressive
+Au fur et à mesure que le joueur avance dans le jeu, augmente la vitesse du jeu et ajoute des obstacles plus nombreux ou plus difficiles à éviter (par exemple, des obstacles mobiles). Cela rendrait les niveaux plus stimulants au fur et à mesure.
+
+4. Ennemis et IA
+Introduis des ennemis qui poursuivent le joueur ou qui se déplacent dans des trajectoires spécifiques. Le joueur devra éviter les ennemis en plus des obstacles statiques.
+
+5. Système de combos et multiplicateurs
+Implémente un système de combo, où si le joueur récolte plusieurs pièces ou billets consécutivement sans en manquer, il obtient un multiplicateur de points pour une durée limitée. Cela encourage le joueur à être rapide et précis.
+
+6. Système de sauvegarde et progression
+Permets au joueur de sauvegarder sa progression et de reprendre là où il s'est arrêté. Par exemple, sauvegarder le score, le niveau atteint, et même les power-ups collectés.
+
+7. Objectifs secondaires et missions
+En plus de la collecte des pièces, tu pourrais ajouter des missions secondaires, comme "récolter 5 billets" ou "saute par-dessus 3 obstacles", qui permettent de gagner des points supplémentaires ou des bonus.
+
+8. Personnalisation du personnage
+Permets au joueur de personnaliser l'apparence du personnage, comme choisir des vêtements ou des accessoires. Ces options pourraient être débloquées en fonction du score ou des niveaux atteints.
+
+9. Effets sonores et musique dynamique
+Change la musique ou ajoute des effets sonores pour signaler un changement de niveau, l'obtention d'un power-up, ou lorsqu'un obstacle est franchi. Cela rendra l'expérience plus immersive.
+
+10. Classements et défis
+Crée un système de classement où les joueurs peuvent comparer leurs scores avec ceux des autres. Tu pourrais aussi proposer des défis quotidiens ou hebdomadaires avec des récompenses spéciales pour ceux qui les accomplissent.
+
+11. Animations supplémentaires
+Améliore les animations pour rendre le jeu plus fluide, par exemple en ajoutant une animation de saut plus dynamique, une animation lorsque le joueur collecte une pièce, ou des effets visuels spéciaux pour les power-ups.
+
+12. Mode multijoueur local (2 joueurs)
+Si tu veux rendre le jeu encore plus amusant, tu pourrais ajouter un mode multijoueur local où deux joueurs peuvent s'affronter pour récolter le plus de pièces ou survivre le plus longtemps.

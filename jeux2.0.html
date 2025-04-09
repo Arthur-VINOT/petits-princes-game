@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>La Course des Petits Princes</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: url(fond.jpg);
+      background-size: cover;
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 2;
+    }
+    .overlay button {
+      margin: 10px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #endScreen, #startScreen {
+      display: none;
+    }
+    .level-up-message {
+      font-size: 30px;
+      color: yellow;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+    <p>Choisis ton niveau de difficulté :</p>
+    <div>
+      <button onclick="selectLevel('facile')">Facile 🟢</button>
+      <button onclick="selectLevel('moyen')">Moyen 🟡</button>
+      <button onclick="selectLevel('difficile')">Difficile 🔴</button>
+    </div>
+    <img src="fond2.png" alt="Logo" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+  </div>
+
+  <div id="endScreen" class="overlay">
+    <h2>Bravo ! Grâce à toi, un rêve a été accompli 🌟</h2>
+    <img src="fin.png" alt="Victoire" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <a href="https://www.petitsprinces.com/" target="_blank">Faire un don maintenant</a>
+    <a href="jeu-petits-princes.html" target="_blank">Recommencer</a>
+  </div>
+
+  <audio id="bgm" loop>
+    <source src="music.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const bgm = document.getElementById('bgm');
+
+    let player, keys, coins, obstacles, score, gameSpeed, maxScore, gravityTimer;
+    let levelUpMessage = "", lastLevel = 0, gameRunning = false, niveau = 'moyen';
+
+    function selectLevel(niv) {
+      niveau = niv;
+      startScreen.style.display = 'none';
+      endScreen.style.display = 'none';
+      bgm.play();
+      initGame();
+    }
+
+    function initGame() {
+      player = { x: 100, y: canvas.height - 150, width: 30, height: 70, dy: 0, gravity: 0.8, jumpForce: -12, grounded: false };
+      keys = {};
+      coins = [];
+      obstacles = [];
+      score = 0;
+      lastLevel = 0;
+      levelUpMessage = "";
+      gameRunning = true;
+
+      // Appliquer les réglages selon le niveau
+      if (niveau === 'facile') {
+        gameSpeed = 3;
+        maxScore = 50;
+      } else if (niveau === 'moyen') {
+        gameSpeed = 4;
+        maxScore = 100;
+      } else if (niveau === 'difficile') {
+        gameSpeed = 5;
+        maxScore = 150;
+      }
+
+      gravityTimer = setInterval(() => { gameSpeed += 0.2 }, 3000);
+      gameLoop();
+    }
+
+    function createCoin() {
+      const y = Math.random() * (canvas.height - 200) + 100;
+      const type = Math.random() < 0.7 ? 'coin' : 'bill';
+      const value = type === 'coin' ? 1 : 10;
+      coins.push({ x: canvas.width, y, width: type === 'coin' ? 15 : 30, height: 15, type, value });
+    }
+
+    function createObstacle() {
+      const h = Math.random() * 50 + 20;
+      obstacles.push({ x: canvas.width, y: canvas.height - h, width: 30, height: h });
+    }
+
+    function drawPlayer() {
+      // Tête
+      ctx.fillStyle = '#FFCC99';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Corps
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(player.x, player.y + 30, player.width, player.height - 20);
+
+      // Bras
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(player.x - 10, player.y + 50);
+      ctx.lineTo(player.x - 20, player.y + 70);
+      ctx.moveTo(player.x + player.width + 10, player.y + 50);
+      ctx.lineTo(player.x + player.width + 20, player.y + 70);
+      ctx.stroke();
+
+      // Jambes
+      ctx.beginPath();
+      ctx.moveTo(player.x + 10, player.y + player.height);
+      ctx.lineTo(player.x + 10, player.y + player.height + 20);
+      ctx.moveTo(player.x + player.width - 10, player.y + player.height);
+      ctx.lineTo(player.x + player.width - 10, player.y + player.height + 20);
+      ctx.stroke();
+    }
+
+    function drawCoins() {
+      for (let c of coins) {
+        ctx.fillStyle = c.type === 'coin' ? 'gold' : 'green';
+        if (c.type === 'coin') {
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.width / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(c.x - c.width / 2, c.y - c.height / 2, c.width, c.height);
+        }
+      }
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = 'red';
+      for (let o of obstacles) {
+        ctx.fillRect(o.x, o.y, o.width, o.height);
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#333';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Dons : ${score} €`, 10, 30);
+    }
+
+    function drawLevelUpMessage() {
+      if (levelUpMessage) {
+        ctx.fillStyle = 'yellow';
+        ctx.font = '30px Arial';
+        ctx.fillText(levelUpMessage, canvas.width / 2 - ctx.measureText(levelUpMessage).width / 2, 60);
+      }
+    }
+
+    function update() {
+      if (score >= maxScore) {
+        gameRunning = false;
+        clearInterval(gravityTimer);
+        endScreen.style.display = 'flex';
+        return;
+      }
+
+      if (score >= (lastLevel + 1) * 10) {
+        lastLevel++;
+        levelUpMessage = `Niveau ${lastLevel} atteint ! 🎉`;
+        setTimeout(() => { levelUpMessage = ""; }, 2000);
+      }
+
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      if (player.y > canvas.height - 100) {
+        player.y = canvas.height - 100;
+        player.dy = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      if (keys[' '] && player.grounded) {
+        player.dy = player.jumpForce;
+      }
+
+      // Collision avec obstacles (sol ou face)
+      for (let obs of obstacles) {
+        if (
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          gameRunning = false;
+          clearInterval(gravityTimer);
+          endScreen.style.display = 'flex';
+        }
+      }
+
+      // Ramasser pièces
+      for (let i = coins.length - 1; i >= 0; i--) {
+        coins[i].x -= gameSpeed;
+        if (
+          player.x < coins[i].x + coins[i].width &&
+          player.x + player.width > coins[i].x &&
+          player.y < coins[i].y + coins[i].height &&
+          player.y + player.height > coins[i].y
+        ) {
+          score += coins[i].value;
+          coins.splice(i, 1);
+        }
+      }
+
+      // Déplacement obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+      }
+
+      // Apparition selon niveau
+      let coinChance = niveau === 'facile' ? 0.03 : niveau === 'difficile' ? 0.015 : 0.02;
+      let obstacleChance = niveau === 'facile' ? 0.005 : niveau === 'difficile' ? 0.02 : 0.01;
+
+      if (Math.random() < coinChance) createCoin();
+      if (Math.random() < obstacleChance) createObstacle();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPlayer();
+      drawCoins();
+      drawObstacles();
+      drawScore();
+      drawLevelUpMessage();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    startScreen.style.display = 'flex';
+  </script>
+</body>
+</html>

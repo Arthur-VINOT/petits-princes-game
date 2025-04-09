@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Course des Petits Princes</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: url(fond.jpg);
+      background-size: cover;
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 2;
+    }
+    .overlay button, .overlay a {
+      margin-top: 20px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #startScreen, #endScreen, #hitMessage {
+      display: none;
+    }
+    #hitMessage {
+      background: rgba(255, 0, 0, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="startScreen" class="overlay">
+    <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+    <p>Collecte les pièces et active des pouvoirs spéciaux !</p>
+    <img src="fond2.png" alt="Logo" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <button onclick="startGame()">Commencer</button>
+  </div>
+  <div id="endScreen" class="overlay">
+    Bravo ! Tu as terminé la partie 🌟<br>
+    <a href="#" onclick="location.reload()">Rejouer</a>
+  </div>
+  <div id="hitMessage" class="overlay">
+    Aïe ! Tu as touché un obstacle !
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const hitMessage = document.getElementById('hitMessage');
+
+    let player, keys = {}, coins = [], obstacles = [], score = 0, gameSpeed = 4;
+    let activePower = null, powerEndTime = 0;
+    let gameRunning = true;
+
+    const playerImage = new Image();
+    playerImage.src = 'prince.png';
+
+    function activatePower(type) {
+      activePower = type;
+      powerEndTime = Date.now() + 10000;
+    }
+
+    function updatePower() {
+      if (Date.now() > powerEndTime) activePower = null;
+    }
+
+    function drawPower() {
+      if (activePower) {
+        ctx.fillStyle = 'cyan';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Pouvoir : ${activePower}`, 10, 60);
+      }
+    }
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      score = 0;
+      gameRunning = true;
+      player = { x: 100, y: canvas.height - 150, width: 60, height: 80, dy: 0, gravity: 0.8, jumpForce: -12, grounded: false };
+      gameLoop();
+    }
+
+    function createCoin() {
+      let y = Math.random() * (canvas.height - 200) + 100;
+      let rand = Math.random();
+      let type = 'coin', value = 1, power = null;
+
+      if (rand < 0.05) {
+        type = 'power';
+        power = ['superJump', 'immunity', 'doubleScore'][Math.floor(Math.random() * 3)];
+        value = 0;
+      } else if (rand < 0.7) {
+        type = 'coin';
+        value = 1;
+      } else {
+        type = 'bill';
+        value = 10;
+      }
+
+      coins.push({ x: canvas.width, y, width: 25, height: 25, type, value, power });
+    }
+
+    function createObstacle() {
+      let h = Math.random() * 50 + 20;
+      obstacles.push({ x: canvas.width, y: canvas.height - h, width: 30, height: h });
+    }
+
+    function update() {
+      updatePower();
+
+      player.dy += player.gravity;
+      player.y += player.dy;
+      if (player.y > canvas.height - 100) {
+        player.y = canvas.height - 100;
+        player.dy = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      if (keys[' '] && player.grounded) {
+        player.dy = activePower === 'superJump' ? player.jumpForce * 1.8 : player.jumpForce;
+      }
+
+      for (let i = coins.length - 1; i >= 0; i--) {
+        coins[i].x -= gameSpeed;
+        if (player.x < coins[i].x + coins[i].width && player.x + player.width > coins[i].x && player.y < coins[i].y + coins[i].height && player.y + player.height > coins[i].y) {
+          if (coins[i].type === 'power') {
+            activatePower(coins[i].power);
+          } else {
+            score += activePower === 'doubleScore' ? coins[i].value * 2 : coins[i].value;
+          }
+          coins.splice(i, 1);
+        }
+      }
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+        if (player.x < obstacles[i].x + obstacles[i].width && player.x + player.width > obstacles[i].x && player.y < obstacles[i].y + obstacles[i].height && player.y + player.height > obstacles[i].y) {
+          if (activePower !== 'immunity') {
+            gameRunning = false;
+            hitMessage.style.display = 'flex';
+            setTimeout(() => hitMessage.style.display = 'none', 2000);
+          }
+        }
+      }
+
+      if (Math.random() < 0.02) createCoin();
+      if (Math.random() < 0.01) createObstacle();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score : ${score} €`, 10, 30);
+      drawPower();
+
+      for (let c of coins) {
+        ctx.fillStyle = c.type === 'power' ? 'cyan' : c.type === 'bill' ? 'green' : 'gold';
+        if (c.type === 'coin') ctx.beginPath(), ctx.arc(c.x, c.y, c.width / 2, 0, Math.PI * 2), ctx.fill();
+        else ctx.fillRect(c.x - c.width / 2, c.y - c.height / 2, c.width, c.height);
+      }
+
+      ctx.fillStyle = 'red';
+      for (let o of obstacles) ctx.fillRect(o.x, o.y, o.width, o.height);
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    startScreen.style.display = 'flex';
+  </script>
+</body>
+</html>

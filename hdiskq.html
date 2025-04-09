@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Course des Petits Princes</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      background: #87ceeb;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .overlay button, .overlay a {
+      margin-top: 20px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #hitMessage {
+      background: rgba(255, 0, 0, 0.7);
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+    <p>Aide le petit prince à récolter des pièces et éviter les obstacles !</p>
+    <button onclick="startGame()">Commencer</button>
+  </div>
+
+  <div id="endScreen" class="overlay" style="display: none;">
+    <h2>Bravo ! Grâce à toi, un rêve a été accompli 🌟</h2>
+    <img src="https://cdn.pixabay.com/photo/2021/02/17/19/59/stars-6024012_960_720.png" 
+         alt="Victoire" 
+         style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <a href="https://www.petitprince.asso.fr/faire-un-don/" target="_blank">Faire un don maintenant</a>
+  </div>
+
+  <div id="hitMessage" class="overlay" style="display: none;">
+    💥 Aïe ! Tu as touché un obstacle ! Fais attention !
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    window.addEventListener('resize', () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    });
+
+    const backgroundImage = new Image();
+    backgroundImage.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?fit=crop&w=1920&q=80';
+
+    const playerImage = new Image();
+    playerImage.src = 'https://i.imgur.com/1XGJ3Ae.png';
+
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const hitMessage = document.getElementById('hitMessage');
+
+    let player, keys, coins, score, gameSpeed, maxScore, gravityTimer, level;
+    let obstacles = [];
+    let gameRunning = false;
+
+    function initGame() {
+      player = {
+        x: 100,
+        y: height - 150,
+        width: 60,
+        height: 80,
+        dy: 0,
+        gravity: 0.8,
+        jumpForce: -14,
+        grounded: false,
+        crouching: false
+      };
+
+      keys = {};
+      coins = [];
+      obstacles = [];
+      score = 0;
+      level = 1;
+      gameSpeed = 4;
+      maxScore = 100;
+      gameRunning = true;
+
+      gravityTimer = setInterval(() => {
+        gameSpeed += 0.2;
+      }, 3000);
+
+      gameLoop();
+    }
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      endScreen.style.display = 'none';
+      initGame();
+    }
+
+    function createCoin() {
+      let y = Math.random() * (height - 200) + 100;
+      coins.push({ x: width, y, width: 20, height: 20 });
+    }
+
+    function createObstacle() {
+      let h = Math.random() > 0.5 ? 40 : 80;
+      obstacles.push({ x: width, y: height - h - 70, width: 40, height: h });
+    }
+
+    function drawPlayer() {
+      ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+    }
+
+    function drawCoins() {
+      ctx.fillStyle = 'gold';
+      for (let coin of coins) {
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = '#8B4513';
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#fff';
+      ctx.font = '24px Arial';
+      ctx.fillText(`Dons : ${score} €`, 20, 40);
+      ctx.fillText(`Niveau : ${level}`, 20, 70);
+    }
+
+    function update() {
+      if (score >= maxScore) {
+        gameRunning = false;
+        clearInterval(gravityTimer);
+        endScreen.style.display = 'flex';
+        return;
+      }
+
+      level = Math.floor(score / 10) + 1;
+
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      if (player.y > height - player.height - 70) {
+        player.y = height - player.height - 70;
+        player.dy = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      if (keys[' '] && player.grounded) {
+        player.dy = player.jumpForce;
+      }
+
+      if (keys['ArrowDown']) {
+        if (!player.crouching) {
+          player.height = 40;
+          player.y += 40;
+          player.crouching = true;
+        }
+      } else {
+        if (player.crouching) {
+          player.height = 80;
+          player.y -= 40;
+          player.crouching = false;
+        }
+      }
+
+      for (let i = coins.length - 1; i >= 0; i--) {
+        coins[i].x -= gameSpeed;
+        if (
+          player.x < coins[i].x + coins[i].width &&
+          player.x + player.width > coins[i].x &&
+          player.y < coins[i].y + coins[i].height &&
+          player.y + player.height > coins[i].y
+        ) {
+          coins.splice(i, 1);
+          score++;
+        }
+      }
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+        if (
+          player.x < obstacles[i].x + obstacles[i].width &&
+          player.x + player.width > obstacles[i].x &&
+          player.y < obstacles[i].y + obstacles[i].height &&
+          player.y + player.height > obstacles[i].y
+        ) {
+          showHitMessage();
+          obstacles.splice(i, 1); // Supprimer obstacle
+        }
+      }
+
+      if (Math.random() < 0.02) createCoin();
+      if (Math.random() < 0.01) createObstacle();
+    }
+
+    function draw() {
+      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      drawPlayer();
+      drawCoins();
+      drawObstacles();
+      drawScore();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showHitMessage() {
+      hitMessage.style.display = 'flex';
+      setTimeout(() => {
+        hitMessage.style.display = 'none';
+      }, 2000);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    playerImage.onload = () => {
+      startScreen.style.display = 'flex';
+    };
+  </script>
+</body>
+</html>

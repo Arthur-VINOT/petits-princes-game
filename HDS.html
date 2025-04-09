@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Course des Petits Princes</title>
+  <link rel="icon" href="fond2.png" type="image/png" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: url(fond.jpg);
+      background-size: cover;
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 2;
+    }
+    #startScreen, #endScreen, #hitMessage {
+      display: none;
+      flex-direction: column;
+    }
+    #hitMessage {
+      background: rgba(255, 0, 0, 0.7);
+      font-size: 20px;
+    }
+    button, a {
+      margin-top: 20px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+    <p>Récolte des pièces, évite les obstacles et monte de niveau !</p>
+    <img src="fond2.png" alt="Logo" style="max-width: 300px; margin-top: 20px; border-radius: 20px;" />
+    <button onclick="startGame()">Commencer</button>
+  </div>
+
+  <div id="endScreen" class="overlay">
+    Bravo ! Tu as terminé 🎉<br />
+    <a href="https://www.petitsprinces.com/" target="_blank">Faire un don</a>
+    <a href="prince.html">Rejouer</a>
+  </div>
+
+  <div id="hitMessage" class="overlay">
+    Aïe ! Tu as touché un obstacle ! Fais attention !
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const hitMessage = document.getElementById('hitMessage');
+
+    let player, obstacles = [], keys = {};
+    let score = 0, level = 1, gameSpeed = 4, gameRunning = false;
+    let levelUpMessage = "";
+    let lastLevelScore = 0;
+
+    const playerImage = new Image();
+    playerImage.src = 'prince.png';
+
+    function initGame() {
+      player = {
+        x: 100, y: canvas.height - 150,
+        width: 60, height: 80,
+        dy: 0, gravity: 0.8, jumpForce: -12, grounded: false
+      };
+      obstacles = [];
+      score = 0;
+      level = 1;
+      gameSpeed = 4;
+      levelUpMessage = "";
+      lastLevelScore = 0;
+      gameRunning = true;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      endScreen.style.display = 'none';
+      initGame();
+    }
+
+    function createObstacle() {
+      const h = Math.random() * 50 + 20;
+      obstacles.push({ x: canvas.width, y: canvas.height - h, width: 30, height: h, passed: false });
+    }
+
+    function update() {
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      if (player.y + player.height > canvas.height) {
+        player.y = canvas.height - player.height;
+        player.dy = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      if (keys[' '] && player.grounded) {
+        player.dy = player.jumpForce;
+      }
+
+      for (let obs of obstacles) {
+        obs.x -= gameSpeed;
+
+        // Collision
+        if (
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          showHitMessage();
+        }
+
+        // Compter les points si on saute par-dessus un obstacle
+        if (!obs.passed && obs.x + obs.width < player.x) {
+          obs.passed = true;
+          score++;
+          checkLevelUp();
+        }
+      }
+
+      obstacles = obstacles.filter(o => o.x + o.width > 0);
+
+      if (Math.random() < 0.01) createObstacle();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+
+      // Obstacles
+      ctx.fillStyle = 'red';
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      }
+
+      // Score + Level
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score : ${score}`, 10, 30);
+      ctx.fillText(`Niveau : ${level}`, 10, 60);
+
+      // Message de niveau
+      if (levelUpMessage) {
+        ctx.fillStyle = 'yellow';
+        ctx.font = '30px Arial';
+        ctx.fillText(levelUpMessage, canvas.width / 2 - 100, canvas.height / 2);
+      }
+    }
+
+    function checkLevelUp() {
+      if (score >= lastLevelScore + 10) {
+        level++;
+        lastLevelScore = score;
+        gameSpeed += 1;
+        levelUpMessage = `Niveau ${level} atteint ! 🎉`;
+        setTimeout(() => {
+          levelUpMessage = "";
+        }, 2000);
+      }
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showHitMessage() {
+      if (hitMessage.style.display === 'flex') return;
+      hitMessage.style.display = 'flex';
+      setTimeout(() => {
+        hitMessage.style.display = 'none';
+      }, 2000);
+    }
+
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    startScreen.style.display = 'flex';
+  </script>
+</body>
+</html>

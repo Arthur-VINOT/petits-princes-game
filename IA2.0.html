@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>La Course des Petits Princes</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .overlay button, .overlay a {
+      margin-top: 20px;
+      background: gold;
+      color: black;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #endScreen {
+      display: none;
+    }
+
+    .shop-overlay {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    .shop-item {
+      margin-top: 10px;
+      padding: 10px;
+      background: lightgoldenrodyellow;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="startScreen" class="overlay">
+  <h1>Bienvenue dans La Course des Petits Princes 🏃‍♂️</h1>
+  <p>Collecte les pièces, évite les obstacles, et décroche ta médaille !</p>
+  <button onclick="startGame()">Commencer</button>
+</div>
+
+<div id="endScreen" class="overlay">
+  <h2 id="endMessage">Fin de la partie !</h2>
+  <p id="medalDisplay"></p>
+  <a href="https://www.petitprince.asso.fr/faire-un-don/" target="_blank">Faire un don</a>
+  <button onclick="restartGame()">Recommencer</button>
+</div>
+
+<div id="shopScreen" class="overlay shop-overlay">
+  <h2>Boutique</h2>
+  <p>Utilisez vos pièces pour acheter des améliorations !</p>
+  <div class="shop-item" onclick="buyLifeUpgrade()">Augmenter la vie (20 pièces)</div>
+  <button onclick="closeShop()">Fermer la boutique</button>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let player, coins, obstacles, keys;
+let score = 0;
+let life = 100;
+let maxLife = 100;
+let gameSpeed = 4;
+let gameRunning = false;
+
+let inShop = false;
+
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const endMessage = document.getElementById('endMessage');
+const medalDisplay = document.getElementById('medalDisplay');
+const shopScreen = document.getElementById('shopScreen');
+
+const playerImage = new Image();
+playerImage.src = "https://i.imgur.com/1XGJ3Ae.png";
+
+const bgImage = new Image();
+bgImage.src = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?fit=crop&w=1920&q=80";
+
+function startGame() {
+  startScreen.style.display = 'none';
+  endScreen.style.display = 'none';
+  shopScreen.style.display = 'none';
+  initGame();
+  gameRunning = true;
+  gameLoop();
+}
+
+function initGame() {
+  player = {
+    x: 100,
+    y: canvas.height - 140,
+    width: 60,
+    height: 80,
+    dy: 0,
+    gravity: 0.8,
+    jumpForce: -14,
+    grounded: false,
+    crouching: false
+  };
+
+  keys = {};
+  coins = [];
+  obstacles = [];
+  score = 0;
+  life = 100;
+  maxLife = 100;
+  gameSpeed = 4;
+}
+
+function createCoin() {
+  const y = Math.random() * (canvas.height - 200) + 50;
+  coins.push({ x: canvas.width, y, width: 20, height: 20 });
+}
+
+function createObstacle() {
+  const heightVal = Math.random() > 0.5 ? 40 : 80;
+  obstacles.push({ x: canvas.width, y: canvas.height - heightVal - 60, width: 40, height: heightVal });
+}
+
+function drawBackground() {
+  ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+}
+
+function drawPlayer() {
+  ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+}
+
+function drawCoins() {
+  ctx.fillStyle = 'gold';
+  coins.forEach(coin => {
+    ctx.beginPath();
+    ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawObstacles() {
+  ctx.fillStyle = 'brown';
+  obstacles.forEach(obs => {
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+  });
+}
+
+function drawHUD() {
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px Arial';
+  ctx.fillText(`Dons : ${score} €`, 20, 30);
+
+  // Afficher la barre de vie en cœurs ❤️
+  ctx.fillText("Vie : ", 20, 60);
+  const heartImage = new Image();
+  heartImage.src = "https://i.imgur.com/8fI6SZz.png";
+  for (let i = 0; i < life / 20; i++) {
+    ctx.drawImage(heartImage, 100 + (i * 30), 45, 25, 25);
+  }
+
+  // Afficher les pièces collectées
+  ctx.fillText(`Coins : ${score}`, canvas.width - 120, 30);
+}
+
+function update() {
+  if (inShop) return; // Ne pas mettre à jour le jeu si on est dans la boutique
+
+  // Gravité
+  player.dy += player.gravity;
+  player.y += player.dy;
+
+  // Sol
+  if (player.y > canvas.height - player.height - 60) {
+    player.y = canvas.height - player.height - 60;
+    player.dy = 0;
+    player.grounded = true;
+  } else {
+    player.grounded = false;
+  }
+
+  // Saut
+  if (keys[' '] && player.grounded) {
+    player.dy = player.jumpForce;
+  }
+
+  // Accroupi
+  if (keys['ArrowDown'] && !player.crouching) {
+    player.height = 40;
+    player.y += 40;
+    player.crouching = true;
+  } else if (!keys['ArrowDown'] && player.crouching) {
+    player.height = 80;
+    player.y -= 40;
+    player.crouching = false;
+  }
+
+  // Déplacement des pièces
+  for (let i = coins.length - 1; i >= 0; i--) {
+    coins[i].x -= gameSpeed;
+    if (
+      player.x < coins[i].x + coins[i].width &&
+      player.x + player.width > coins[i].x &&
+      player.y < coins[i].y + coins[i].height &&
+      player.y + player.height > coins[i].y
+    ) {
+      coins.splice(i, 1);
+      score++;
+    }
+  }
+
+  // Déplacement des obstacles
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    obstacles[i].x -= gameSpeed;
+
+    if (
+      player.x < obstacles[i].x + obstacles[i].width &&
+      player.x + player.width > obstacles[i].x &&
+      player.y < obstacles[i].y + obstacles[i].height &&
+      player.y + player.height > obstacles[i].y
+    ) {
+      life -= 20;
+      obstacles.splice(i, 1);
+      if (life <= 0) {
+        endGame();
+        return;
+      }
+    }
+  }
+
+  if (Math.random() < 0.02) createCoin();
+  if (Math.random() < 0.01) createObstacle();
+}
+
+function draw() {
+  drawBackground();
+  drawPlayer();
+  drawCoins();
+  drawObstacles();
+  drawHUD();
+}
+
+function gameLoop() {
+  if (!gameRunning) return;
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameRunning = false;
+  endScreen.style.display = 'flex';
+  endMessage.innerText = "Tu as perdu toutes tes vies 😢";
+  if (score >= 100) {
+    medalDisplay.innerText = "🏅 Médaille d'Or !";
+  } else if (score >= 1) {
+    medalDisplay.innerText = "🥈 Médaille d'Argent !";
+  } else if (score >= 30) {
+    medalDisplay.innerText = "🥉 Médaille de Bronze !";
+  } else {
+    medalDisplay.innerText = "Pas de médaille, mais tu peux réessayer !";
+  }
+}
+
+function restartGame() {
+  startGame();
+}
+
+function openShop() {
+  shopScreen.style.display = 'flex';
+}
+
+function closeShop() {
+  shopScreen.style.display = 'none';
+}
+
+function buyLifeUpgrade() {
+  if (score >= 20) {
+    score -= 20;
+    maxLife += 20;
+    life = maxLife;
+  }
+}
+
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+// Ouvrir la boutique après un certain score (par exemple 50€)
+setInterval(() => {
+  if (score >= 50 && !inShop) {
+    inShop = true;
+    openShop();
+  }
+}, 1000);
+</script>
+</body>
+</html>

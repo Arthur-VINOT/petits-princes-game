@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Jeu Multijoueur avec IA</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { background: #222; display: block; margin: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Joueur humain
+    const joueur = {
+      x: 100,
+      y: 300,
+      width: 40,
+      height: 40,
+      speed: 5,
+      color: 'blue'
+    };
+
+    // Joueur IA
+    const ia = {
+      x: 600,
+      y: 300,
+      width: 40,
+      height: 40,
+      speed: 2,
+      color: 'red'
+    };
+
+    // Contrôles clavier
+    const touches = {
+      gauche: false,
+      droite: false
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') touches.gauche = true;
+      if (e.key === 'ArrowRight') touches.droite = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft') touches.gauche = false;
+      if (e.key === 'ArrowRight') touches.droite = false;
+    });
+
+    function miseAJour() {
+      // Déplacement joueur
+      if (touches.gauche) joueur.x -= joueur.speed;
+      if (touches.droite) joueur.x += joueur.speed;
+
+      // Déplacement IA (elle suit le joueur)
+      if (ia.x < joueur.x) ia.x += ia.speed;
+      if (ia.x > joueur.x) ia.x -= ia.speed;
+
+      // Affichage
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Dessiner le joueur
+      ctx.fillStyle = joueur.color;
+      ctx.fillRect(joueur.x, joueur.y, joueur.width, joueur.height);
+
+      // Dessiner l'IA
+      ctx.fillStyle = ia.color;
+      ctx.fillRect(ia.x, ia.y, ia.width, ia.height);
+
+      requestAnimationFrame(miseAJour);
+    }
+
+    miseAJour();
+  </script>
+</body>
+</html>

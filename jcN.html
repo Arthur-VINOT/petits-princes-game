@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion - Petits Princes</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('fond.jpg') no-repeat center center/cover;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      width: 300px;
+    }
+
+    input {
+      display: block;
+      margin: 10px auto;
+      padding: 10px;
+      width: 90%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background: gold;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #gameZone {
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="loginZone">
+    <h2>Connexion au jeu 🌟</h2>
+    <input type="text" id="username" placeholder="Nom d'utilisateur" />
+    <input type="password" id="password" placeholder="Mot de passe" />
+    <button onclick="login()">Se connecter</button>
+    <button onclick="register()">Créer un compte</button>
+    <p id="msg"></p>
+  </div>
+
+  <div id="gameZone">
+    <h2>Bienvenue <span id="playerName"></span> !</h2>
+    <!-- Ton jeu commence ici -->
+    <p>🎮 Le jeu peut démarrer ici !</p>
+    <button onclick="logout()">Déconnexion</button>
+  </div>
+
+  <script>
+    function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      const stored = JSON.parse(localStorage.getItem(user));
+
+      if (stored && stored.password === pass) {
+        document.getElementById('loginZone').style.display = 'none';
+        document.getElementById('gameZone').style.display = 'block';
+        document.getElementById('playerName').innerText = user;
+      } else {
+        document.getElementById('msg').innerText = "❌ Mauvais identifiants !";
+      }
+    }
+
+    function register() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      const existing = localStorage.getItem(user);
+
+      if (existing) {
+        document.getElementById('msg').innerText = "⚠️ Ce nom existe déjà.";
+      } else {
+        localStorage.setItem(user, JSON.stringify({ password: pass }));
+        document.getElementById('msg').innerText = "✅ Compte créé ! Tu peux te connecter.";
+      }
+    }
+
+    function logout() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
